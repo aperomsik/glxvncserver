@@ -245,7 +245,7 @@ $xcmd = "Xorg :$displayNumber";
 $xcmd .= " -noreset +extension GLX +extension RANDR +extension RENDER";
 $xcmd .= " -config $xconfFile";
 
-$vcmd = "x11vnc -many";
+$vcmd = "x11vnc -many -xrandr";
 $vcmd .= " -desktop " . &quotedString($desktopName);
 if ($useClasses) {
   $vcmd .= " -httpd $vncJavaFiles";
