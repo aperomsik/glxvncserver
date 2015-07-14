@@ -47,7 +47,7 @@
 # Global variables.  You may want to configure some of these for your site.
 #
 
-$geometry = "1024x768";
+$geometry = undef;
 $depth = 16;
 $vncJavaFiles = (((-d "/usr/share/vnc-java") && "/usr/share/vnc-java") ||
 		 ((-d "/usr/share/vnc/classes") && "/usr/share/vnc/classes") ||
@@ -262,15 +262,6 @@ if ($useClasses) {
 }
 $xcmd .= " -auth $xauthorityFile";
 $vcmd .= " -auth $xauthorityFile";
-# if ($geometry) {
-#   if ($#$geometry==-1) {
-#     $xcmd .= " -geometry $geometry";
-#   } else {
-#     foreach $i (0..$#$geometry) {
-#       $xcmd .= " -geometry $geometry->[$i]";
-#     }
-#   }
-# }
 $xcmd .= " -depth $depth" if ($depth);
 $xcmd .= " -pixelformat $pixelformat" if ($pixelformat);
 $vcmd .= " -rfbwait 30000";
@@ -314,13 +305,10 @@ if (!(-e "$xstartup")) {
     chmod 0755, "$xstartup";
 }
 
-# Run the X startup script.
-
-warn "Starting applications specified in $xstartup\n";
-warn "Log file is $desktopLog\n\n";
-
 # If the unix domain socket exists then use that (DISPLAY=:n) otherwise use
 # TCP (DISPLAY=host:n)
+
+my $prev_disp = $ENV{DISPLAY};
 
 if (-e "/tmp/.X11-unix/X$displayNumber" ||
     -e "/usr/spool/sockets/X11/$displayNumber")
@@ -331,6 +319,29 @@ if (-e "/tmp/.X11-unix/X$displayNumber" ||
 }
 $ENV{VNCDESKTOP}= $desktopName;
     
+# Set requested geometry using xrandr
+
+if (defined $geometry) {
+  if ($#$geometry==-1) {
+    system("xrandr -s $geometry");
+  } else {
+    system("xrandr -s $geometry->[0]");
+  }
+} else {
+  my @dim = grep /dimensions/, `xdpyinfo -display $prev_disp`;
+  if (scalar @dim == 1 &&
+      $dim[0] =~ /\s(\d+x\d+) pixels/) {
+    my $geom = $1;
+    print STDERR "using geometry $geom as per $prev_disp\n";
+    system("xrandr -s $geom");
+  }
+}
+
+# Run the X startup script.
+
+warn "Starting applications specified in $xstartup\n";
+warn "Log file is $desktopLog\n\n";
+
 system("$xstartup >> " . &quotedString($desktopLog) . " 2>&1 &");
 warn "Running $vcmd >> $vncLog\n";
 system("$vcmd >> " . &quotedString($vncLog) . " 2>&1 &");
